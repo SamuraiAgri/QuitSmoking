@@ -1,20 +1,21 @@
-//
-//  QuitSmokingApp.swift
-//  QuitSmoking
-//
-//  Created by iwamoto rinka on 2025/03/02.
-//
-
 import SwiftUI
 
 @main
 struct QuitSmokingApp: App {
-    let persistenceController = PersistenceController.shared
-
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            MainView()
         }
+    }
+}
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        // 通知許可リクエスト
+        NotificationService.shared.requestAuthorization { _ in }
+        
+        return true
     }
 }
