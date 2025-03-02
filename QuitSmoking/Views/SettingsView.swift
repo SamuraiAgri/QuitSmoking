@@ -17,11 +17,18 @@ struct SettingsView: View {
                         showingDatePicker = true
                     }) {
                         HStack {
-                            Text("禁煙開始日")
+                            Text("禁煙開始日時")
                             Spacer()
-                            Text(dateFormatter.string(from: viewModel.quitDate))
+                            Text(dateTimeFormatter.string(from: viewModel.quitDate))
                                 .foregroundColor(.blue)
                         }
+                    }
+                    
+                    HStack {
+                        Text("経過時間")
+                        Spacer()
+                        Text(viewModel.formattedElapsedTimeString())
+                            .foregroundColor(.secondary)
                     }
                     
                     HStack {
@@ -120,7 +127,7 @@ struct SettingsView: View {
                 )
             }
             .sheet(isPresented: $showingDatePicker) {
-                DatePickerSheet(
+                DateTimePickerSheet(
                     date: $tempQuitDate,
                     onSave: {
                         viewModel.quitDate = tempQuitDate
@@ -137,49 +144,10 @@ struct SettingsView: View {
         }
     }
     
-    private var dateFormatter: DateFormatter {
+    private var dateTimeFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateStyle = .long
-        formatter.timeStyle = .none
+        formatter.timeStyle = .short // 時間も表示
         return formatter
-    }
-}
-
-struct DatePickerSheet: View {
-    @Binding var date: Date
-    var onSave: () -> Void
-    var onCancel: () -> Void
-    
-    var body: some View {
-        NavigationView {
-            VStack {
-                DatePicker(
-                    "禁煙開始日",
-                    selection: $date,
-                    in: ...Date(),
-                    displayedComponents: .date
-                )
-                .datePickerStyle(GraphicalDatePickerStyle())
-                .padding()
-                
-                Spacer()
-            }
-            .navigationBarTitle("禁煙開始日を選択", displayMode: .inline)
-            .navigationBarItems(
-                leading: Button("キャンセル") {
-                    onCancel()
-                },
-                trailing: Button("保存") {
-                    onSave()
-                }
-            )
-        }
-    }
-}
-
-// キーボードを閉じるための拡張
-extension View {
-    func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }

@@ -1,3 +1,4 @@
+
 import SwiftUI
 
 struct StatisticsView: View {
@@ -7,7 +8,7 @@ struct StatisticsView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 30) { // スペースを増やして余裕を持たせる
+                VStack(spacing: 30) {
                     // 禁煙継続日数のグラフ
                     VStack(alignment: .leading, spacing: 10) {
                         Text("禁煙の統計")
@@ -23,7 +24,7 @@ struct StatisticsView: View {
                             EnhancedDayProgressGraph(daysSinceQuit: viewModel.daysSinceQuit, animate: animateGraphs)
                                 .padding()
                         }
-                        .frame(height: 440) // より多くのスペースを確保
+                        .frame(height: 440)
                         .padding(.horizontal)
                     }
                     
@@ -50,7 +51,7 @@ struct StatisticsView: View {
                             )
                             .padding()
                         }
-                        .frame(height: 350) // 高さを増やして余裕を持たせる
+                        .frame(height: 350)
                         .padding(.horizontal)
                     }
                     
@@ -66,8 +67,12 @@ struct StatisticsView: View {
                                 .fill(Color(.systemBackground))
                                 .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                             
-                            EnhancedHealthTimelineView(daysSinceQuit: viewModel.daysSinceQuit)
-                                .padding()
+                            EnhancedHealthTimelineView(
+                                daysSinceQuit: viewModel.daysSinceQuit,
+                                hoursSinceQuit: viewModel.hoursSinceQuit,
+                                minutesSinceQuit: viewModel.minutesSinceQuit
+                            )
+                            .padding()
                         }
                         .padding(.horizontal)
                     }
@@ -537,82 +542,6 @@ struct EnhancedSavingsGraph: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 10)
-            }
-        }
-    }
-}
-
-struct EnhancedHealthTimelineView: View {
-    let daysSinceQuit: Int
-    
-    var healthMilestones: [(days: Int, title: String, description: String, icon: String)] {
-        return [
-            (0, "20分後", "血圧と脈拍が通常のレベルに戻ります。", "heart.fill"),
-            (0, "12時間後", "血液中の一酸化炭素レベルが正常値に戻ります。", "lungs.fill"),
-            (1, "24時間後", "心臓発作のリスクが低下し始めます。", "heart.circle.fill"),
-            (2, "48時間後", "味覚と嗅覚が改善し始めます。", "nose.fill"),
-            (3, "72時間後", "気管支が緩み、呼吸が楽になります。エネルギーレベルが上昇します。", "bolt.fill"),
-            (14, "2週間後", "循環が改善し、歩行が楽になります。", "figure.walk"),
-            (30, "1ヶ月後", "肺機能が30%改善します。咳や息切れが減少します。", "lungs"),
-            (90, "3ヶ月後", "循環が改善し、肺機能が大幅に向上します。", "arrow.up.heart.fill"),
-            (180, "6ヶ月後", "ストレスに対処しやすくなり、感染症のリスクが減少します。", "shield.fill"),
-            (365, "1年後", "冠動脈疾患のリスクが半分に減少します。", "heart.text.square.fill")
-        ]
-    }
-    
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(0..<healthMilestones.count, id: \.self) { index in
-                    let milestone = healthMilestones[index]
-                    let isCompleted = daysSinceQuit >= milestone.days
-                    
-                    HStack(alignment: .top, spacing: 15) {
-                        // タイムラインの縦線とポイント
-                        VStack {
-                            ZStack {
-                                Circle()
-                                    .fill(isCompleted ? Color.green : Color.gray.opacity(0.3))
-                                    .frame(width: 30, height: 30)
-                                
-                                Image(systemName: milestone.icon)
-                                    .foregroundColor(isCompleted ? .white : .gray)
-                                    .font(.system(size: 14))
-                            }
-                            
-                            if index < healthMilestones.count - 1 {
-                                Rectangle()
-                                    .fill(isCompleted ? Color.green : Color.gray.opacity(0.3))
-                                    .frame(width: 2, height: 30)
-                            }
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(milestone.title)
-                                .font(.headline)
-                                .foregroundColor(isCompleted ? .primary : .secondary)
-                            
-                            Text(milestone.description)
-                                .font(.subheadline)
-                                .foregroundColor(isCompleted ? .primary : .secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            
-                            if isCompleted {
-                                Text("達成済み！")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                                    .padding(.top, 2)
-                            } else {
-                                let daysLeft = milestone.days - daysSinceQuit
-                                Text("あと\(daysLeft)日")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                                    .padding(.top, 2)
-                            }
-                        }
-                        .padding(.bottom, 8)
-                    }
-                }
             }
         }
     }

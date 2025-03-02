@@ -9,17 +9,21 @@ struct DashboardView: View {
                 VStack(spacing: 20) {
                     // 禁煙日数カード
                     VStack {
-                        Text("禁煙継続日数")
+                        Text("禁煙継続時間")
                             .font(.headline)
                             .padding(.top)
                         
                         Text("\(viewModel.daysSinceQuit)")
                             .font(.system(size: 60, weight: .bold))
                             .foregroundColor(.blue)
-                            .padding()
                         
                         Text("日")
                             .font(.title2)
+                        
+                        // 時間と分を追加表示
+                        Text(viewModel.formattedElapsedTimeString())
+                            .font(.headline)
+                            .foregroundColor(.blue.opacity(0.8))
                             .padding(.bottom)
                     }
                     .frame(maxWidth: .infinity)
@@ -64,6 +68,21 @@ struct DashboardView: View {
                     .background(Color.orange.opacity(0.1))
                     .cornerRadius(12)
                     
+                    // 禁煙開始日時カード
+                    VStack {
+                        Text("禁煙開始日時")
+                            .font(.headline)
+                            .padding(.top)
+                        
+                        Text(formattedStartDateTime(viewModel.quitDate))
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.purple)
+                            .padding()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .background(Color.purple.opacity(0.1))
+                    .cornerRadius(12)
+                    
                     // 最近の達成バッジ
                     if !viewModel.achievements.isEmpty {
                         VStack(alignment: .leading) {
@@ -106,6 +125,18 @@ struct DashboardView: View {
                 .padding()
             }
             .navigationTitle("禁煙ダッシュボード")
+            .onAppear {
+                // 画面表示時に統計を更新
+                viewModel.updateStatistics()
+            }
         }
+    }
+    
+    // 日付と時間のフォーマット
+    private func formattedStartDateTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .short // 時間も表示
+        return formatter.string(from: date)
     }
 }

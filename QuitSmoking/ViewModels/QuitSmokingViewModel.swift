@@ -15,6 +15,8 @@ class QuitSmokingViewModel: ObservableObject {
     
     // 計算プロパティ
     @Published var daysSinceQuit = 0
+    @Published var hoursSinceQuit = 0
+    @Published var minutesSinceQuit = 0
     @Published var moneySaved = 0.0
     @Published var cigarettesNotSmoked = 0
     @Published var achievements: [Achievement] = []
@@ -116,13 +118,16 @@ class QuitSmokingViewModel: ObservableObject {
     func updateStatistics() {
         let now = Date()
         
-        // 禁煙日数
+        // 禁煙経過時間と日数
         let calendar = Calendar.current
-        let components = calendar.dateComponents([.day], from: quitDate, to: now)
+        let components = calendar.dateComponents([.day, .hour, .minute], from: quitDate, to: now)
         daysSinceQuit = max(0, components.day ?? 0)
+        hoursSinceQuit = max(0, (components.day ?? 0) * 24 + (components.hour ?? 0))
+        minutesSinceQuit = max(0, (components.day ?? 0) * 24 * 60 + (components.hour ?? 0) * 60 + (components.minute ?? 0))
         
-        // 吸わなかった本数
-        cigarettesNotSmoked = daysSinceQuit * cigarettesPerDay
+        // 吸わなかった本数（時間ベース）
+        let cigarettesPerHour = Double(cigarettesPerDay) / 24.0
+        cigarettesNotSmoked = Int(Double(hoursSinceQuit) * cigarettesPerHour)
         
         // 節約した金額
         let packPrice = pricePerPack / Double(cigarettesPerPack)
@@ -197,6 +202,8 @@ class QuitSmokingViewModel: ObservableObject {
             cigarettesPerPack = 20
             goal = "健康的な生活を取り戻す"
             daysSinceQuit = 0
+            hoursSinceQuit = 0
+            minutesSinceQuit = 0
             moneySaved = 0.0
             cigarettesNotSmoked = 0
             achievements = []
@@ -212,6 +219,28 @@ class QuitSmokingViewModel: ObservableObject {
             updateStatistics()
         } catch {
             print("データのリセットに失敗しました: \(error)")
+        }
+    }
+    
+    // 禁煙開始時間を文字列で取得
+    func formattedQuitTimeString() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: quitDate)
+    }
+    
+    // 経過時間を文字列で取得（例: 3日5時間20分）
+    func formattedElapsedTimeString() -> String {
+        let days = daysSinceQuit
+        let hours = hoursSinceQuit % 24
+        let minutes = minutesSinceQuit % 60
+        
+        if days > 0 {
+            return "\(days)日\(hours)時間\(minutes)分"
+        } else if hours > 0 {
+            return "\(hours)時間\(minutes)分"
+        } else {
+            return "\(minutes)分"
         }
     }
     
@@ -244,6 +273,7 @@ class QuitSmokingViewModel: ObservableObject {
     }
     
     private func startTimer() {
+        // より頻繁に更新（1分ごと）
         timer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
             self?.updateStatistics()
         }
@@ -270,14 +300,47 @@ class QuitSmokingViewModel: ObservableObject {
     }
     
     private func checkTimeBasedAchievements() {
-        let milestones = [
+        // 分単位の達成（初期の短い時間）
+        let minuteMilestones = [
+            (minutes: 20, title: "20分達成", detail: "禁煙を20分続けました", icon: "clock.badge")
+        ]
+        
+        for milestone in minuteMilestones {
+            if minutesSinceQuit >= milestone.minutes && !hasAchievement(title: milestone.title) {
+                createAchievement(
+                    type: "time",
+                    title: milestone.title,
+                    detail: milestone.detail,
+                    iconName: milestone.icon
+                )
+            }
+        }
+        
+        // 時間単位の達成
+        let hourMilestones = [
+            (hours: 12, title: "12時間達成", detail: "禁煙を12時間続けました", icon: "clock")
+        ]
+        
+        for milestone in hourMilestones {
+            if hoursSinceQuit >= milestone.hours && !hasAchievement(title: milestone.title) {
+                createAchievement(
+                    type: "time",
+                    title: milestone.title,
+                    detail: milestone.detail,
+                    iconName: milestone.icon
+                )
+            }
+        }
+        
+        // 日単位の達成
+        let dayMilestones = [
             (days: 1, title: "1日達成", detail: "禁煙を1日続けました", icon: "clock.badge.checkmark"),
             (days: 3, title: "3日達成", detail: "禁煙を3日続けました", icon: "clock.badge.checkmark.fill"),
             (days: 7, title: "1週間達成", detail: "禁煙を1週間続けました", icon: "calendar.badge.checkmark"),
             (days: 30, title: "1ヶ月達成", detail: "禁煙を1ヶ月続けました", icon: "calendar.badge.clock")
         ]
         
-        for milestone in milestones {
+        for milestone in dayMilestones {
             if daysSinceQuit >= milestone.days && !hasAchievement(title: milestone.title) {
                 createAchievement(
                     type: "time",
