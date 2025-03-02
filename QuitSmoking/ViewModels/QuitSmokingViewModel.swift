@@ -9,7 +9,8 @@ class QuitSmokingViewModel: ObservableObject {
     @Published var cigarettesPerDay = 20
     @Published var pricePerPack = 500.0
     @Published var cigarettesPerPack = 20
-    @Published var currency = "円"
+    // 通貨は円で固定
+    let currency = "円"
     @Published var goal = "健康的な生活を取り戻す"
     
     // 計算プロパティ
@@ -27,6 +28,30 @@ class QuitSmokingViewModel: ObservableObject {
     init() {
         loadData()
         startTimer()
+        
+        // quitDateが変更されたら統計を更新するサブスクリプションを追加
+        $quitDate
+            .debounce(for: .seconds(0.5), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.updateStatistics()
+            }
+            .store(in: &cancellables)
+        
+        // cigarettesPerDayが変更されたら統計を更新するサブスクリプション
+        $cigarettesPerDay
+            .debounce(for: .seconds(0.5), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.updateStatistics()
+            }
+            .store(in: &cancellables)
+        
+        // 価格関連の変更に対するサブスクリプション
+        Publishers.CombineLatest($pricePerPack, $cigarettesPerPack)
+            .debounce(for: .seconds(0.5), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.updateStatistics()
+            }
+            .store(in: &cancellables)
     }
     
     deinit {
@@ -55,6 +80,9 @@ class QuitSmokingViewModel: ObservableObject {
         isFirstLaunch = false
         UserDefaults.standard.set(false, forKey: "QuitSmoking_FirstLaunch")
         
+        // 統計を更新
+        updateStatistics()
+        
         scheduleMotivationalNotifications()
     }
     
@@ -76,6 +104,12 @@ class QuitSmokingViewModel: ObservableObject {
         record.updatedAt = Date()
         
         DataStoreService.shared.saveContext()
+        
+        // 統計を更新
+        updateStatistics()
+        
+        // モチベーション通知を再スケジュール
+        scheduleMotivationalNotifications()
     }
     
     // 現在の状況を計算
@@ -96,6 +130,12 @@ class QuitSmokingViewModel: ObservableObject {
         
         // 達成バッジをチェック
         checkAndCreateAchievements()
+        
+        // メインスレッドでUI更新を保証
+        DispatchQueue.main.async {
+            // UIの強制更新をトリガー
+            self.objectWillChange.send()
+        }
     }
     
     // モチベーション通知をスケジュール
@@ -107,22 +147,71 @@ class QuitSmokingViewModel: ObservableObject {
         
         // 1日後の通知
         if let oneDayDate = Calendar.current.date(byAdding: .day, value: 1, to: quitDate) {
-            notificationService.scheduleNotification(
-                title: "禁煙1日達成！",
-                body: "素晴らしい！あなたは既に\(cigarettesPerDay)本のタバコを吸わずに済みました。この調子で続けましょう！",
-                identifier: "QuitSmoking_OneDay",
-                triggerDate: oneDayDate
-            ) { _ in }
+            // 日付が過去でない場合のみスケジュール
+            if oneDayDate > Date() {
+                notificationService.scheduleNotification(
+                    title: "禁煙1日達成！",
+                    body: "素晴らしい！あなたは既に\(cigarettesPerDay)本のタバコを吸わずに済みました。この調子で続けましょう！",
+                    identifier: "QuitSmoking_OneDay",
+                    triggerDate: oneDayDate
+                ) { _ in }
+            }
         }
         
         // 1週間後の通知
         if let oneWeekDate = Calendar.current.date(byAdding: .day, value: 7, to: quitDate) {
-            notificationService.scheduleNotification(
-                title: "禁煙1週間達成！",
-                body: "一週間続けられました！あなたの体は既に回復し始めています。",
-                identifier: "QuitSmoking_OneWeek",
-                triggerDate: oneWeekDate
-            ) { _ in }
+            // 日付が過去でない場合のみスケジュール
+            if oneWeekDate > Date() {
+                notificationService.scheduleNotification(
+                    title: "禁煙1週間達成！",
+                    body: "一週間続けられました！あなたの体は既に回復し始めています。",
+                    identifier: "QuitSmoking_OneWeek",
+                    triggerDate: oneWeekDate
+                ) { _ in }
+            }
+        }
+    }
+    
+    // すべてのデータをリセット
+    func resetAllData() {
+        // CoreDataのエンティティを削除
+        let context = DataStoreService.shared.viewContext
+        
+        // QuitSmokingRecordをすべて削除
+        let recordsFetchRequest: NSFetchRequest<NSFetchRequestResult> = NSFetchRequest(entityName: "QuitSmokingRecord")
+        let recordsDeleteRequest = NSBatchDeleteRequest(fetchRequest: recordsFetchRequest)
+        
+        // Achievementをすべて削除
+        let achievementsFetchRequest: NSFetchRequest<NSFetchRequestResult> = NSFetchRequest(entityName: "Achievement")
+        let achievementsDeleteRequest = NSBatchDeleteRequest(fetchRequest: achievementsFetchRequest)
+        
+        do {
+            try context.execute(recordsDeleteRequest)
+            try context.execute(achievementsDeleteRequest)
+            try context.save()
+            
+            // メモリ上のデータもリセット
+            quitDate = Date()
+            cigarettesPerDay = 20
+            pricePerPack = 500.0
+            cigarettesPerPack = 20
+            goal = "健康的な生活を取り戻す"
+            daysSinceQuit = 0
+            moneySaved = 0.0
+            cigarettesNotSmoked = 0
+            achievements = []
+            
+            // 初回起動フラグをリセット
+            isFirstLaunch = true
+            UserDefaults.standard.set(true, forKey: "QuitSmoking_FirstLaunch")
+            
+            // 通知もキャンセル
+            NotificationService.shared.cancelAllNotifications()
+            
+            // 統計を更新
+            updateStatistics()
+        } catch {
+            print("データのリセットに失敗しました: \(error)")
         }
     }
     
@@ -143,7 +232,6 @@ class QuitSmokingViewModel: ObservableObject {
                 cigarettesPerDay = Int(record.cigarettesPerDay)
                 pricePerPack = record.pricePerPack
                 cigarettesPerPack = Int(record.cigarettesPerPack)
-                currency = record.currency ?? "円"
                 goal = record.goal ?? "健康的な生活を取り戻す"
             }
             
@@ -185,7 +273,8 @@ class QuitSmokingViewModel: ObservableObject {
         let milestones = [
             (days: 1, title: "1日達成", detail: "禁煙を1日続けました", icon: "clock.badge.checkmark"),
             (days: 3, title: "3日達成", detail: "禁煙を3日続けました", icon: "clock.badge.checkmark.fill"),
-            (days: 7, title: "1週間達成", detail: "禁煙を1週間続けました", icon: "calendar.badge.checkmark")
+            (days: 7, title: "1週間達成", detail: "禁煙を1週間続けました", icon: "calendar.badge.checkmark"),
+            (days: 30, title: "1ヶ月達成", detail: "禁煙を1ヶ月続けました", icon: "calendar.badge.clock")
         ]
         
         for milestone in milestones {
@@ -203,7 +292,10 @@ class QuitSmokingViewModel: ObservableObject {
     private func checkMoneySavedAchievements() {
         let milestones = [
             (amount: 1000.0, title: "1,000\(currency)節約", detail: "タバコを我慢して1,000\(currency)節約しました", icon: "yensign.circle"),
-            (amount: 5000.0, title: "5,000\(currency)節約", detail: "タバコを我慢して5,000\(currency)節約しました", icon: "yensign.circle.fill")
+            (amount: 5000.0, title: "5,000\(currency)節約", detail: "タバコを我慢して5,000\(currency)節約しました", icon: "yensign.circle.fill"),
+            (amount: 10000.0, title: "1万\(currency)節約", detail: "タバコを我慢して1万\(currency)節約しました", icon: "banknote"),
+            (amount: 50000.0, title: "5万\(currency)節約", detail: "タバコを我慢して5万\(currency)節約しました", icon: "banknote.fill"),
+            (amount: 100000.0, title: "10万\(currency)節約", detail: "タバコを我慢して10万\(currency)節約しました", icon: "creditcard")
         ]
         
         for milestone in milestones {
