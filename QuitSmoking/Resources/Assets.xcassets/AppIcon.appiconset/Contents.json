@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "appstore 1.png",
+      "filename" : "たばこばいばい.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -24,7 +24,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "appstore.png",
+      "filename" : "たばこばいばい 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

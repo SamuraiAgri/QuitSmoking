@@ -216,7 +216,7 @@ struct CompactDayProgressGraph: View {
                 CompactInfoTile(
                     icon: "yensign.circle",
                     title: "節約額",
-                    value: "\(Int(moneySaved))",
+                    value: "\(Int(moneySaved))円",
                     color: .green
                 )
             }
