@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct StatisticsView: View {
@@ -28,9 +27,9 @@ struct StatisticsView: View {
                         .padding(.horizontal)
                     }
                     
-                    // 節約金額のグラフ
+                    // 節約金額の推移グラフを健康影響サマリーに置き換え
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("節約金額の推移")
+                        Text("健康改善サマリー")
                             .font(.headline)
                             .padding(.horizontal)
                             .foregroundColor(.primary)
@@ -40,12 +39,11 @@ struct StatisticsView: View {
                                 .fill(Color(.systemBackground))
                                 .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                             
-                            EnhancedSavingsGraph(
+                            HealthImprovementSummary(
+                                daysSinceQuit: viewModel.daysSinceQuit,
+                                hoursSinceQuit: viewModel.hoursSinceQuit,
+                                cigarettesNotSmoked: viewModel.cigarettesNotSmoked,
                                 moneySaved: viewModel.moneySaved,
-                                days: viewModel.daysSinceQuit,
-                                cigarettesPerDay: viewModel.cigarettesPerDay,
-                                pricePerPack: viewModel.pricePerPack,
-                                cigarettesPerPack: viewModel.cigarettesPerPack,
                                 currency: viewModel.currency,
                                 animate: animateGraphs
                             )
@@ -93,6 +91,196 @@ struct StatisticsView: View {
         }
     }
 }
+
+// 新しいコンポーネント: 健康改善サマリー
+struct HealthImprovementSummary: View {
+    let daysSinceQuit: Int
+    let hoursSinceQuit: Int
+    let cigarettesNotSmoked: Int
+    let moneySaved: Double
+    let currency: String
+    let animate: Bool
+    
+    // 健康関連の改善指標
+    private var healthMetrics: [(title: String, value: String, icon: String, color: Color, description: String)] {
+        return [
+            (
+                title: "肺機能の回復",
+                value: lungFunctionRecovery(),
+                icon: "lungs.fill",
+                color: .blue,
+                description: "禁煙後、肺の機能は徐々に回復していきます。"
+            ),
+            (
+                title: "心臓病リスク低減",
+                value: heartRiskReduction(),
+                icon: "heart.fill",
+                color: .red,
+                description: "禁煙後、心臓発作などの心血管疾患のリスクが段階的に低下します。"
+            ),
+            (
+                title: "タール摂取回避",
+                value: "\(tarAvoided())mg",
+                icon: "exclamationmark.triangle.fill",
+                color: .orange,
+                description: "たばこ1本あたり約10mgのタールを含みます。"
+            ),
+            (
+                title: "節約金額",
+                value: "\(Int(moneySaved))\(currency)",
+                icon: "yensign.circle.fill",
+                color: .green,
+                description: "タバコを買わずに節約できた金額です。"
+            )
+        ]
+    }
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("禁煙によるポジティブな変化")
+                .font(.headline)
+                .padding(.bottom, 5)
+            
+            // メトリクスを2x2のグリッドで表示
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                ForEach(0..<healthMetrics.count, id: \.self) { index in
+                    let metric = healthMetrics[index]
+                    
+                    VStack(spacing: 8) {
+                        Image(systemName: metric.icon)
+                            .font(.system(size: 24))
+                            .foregroundColor(metric.color)
+                            .opacity(animate ? 1 : 0)
+                            .animation(.easeIn.delay(0.2 * Double(index)), value: animate)
+                        
+                        Text(metric.title)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        Text(metric.value)
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundColor(metric.color)
+                            .opacity(animate ? 1 : 0)
+                            .animation(.easeIn.delay(0.3 * Double(index)), value: animate)
+                        
+                        Text(metric.description)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 5)
+                    }
+                    .padding(10)
+                    .background(metric.color.opacity(0.1))
+                    .cornerRadius(10)
+                }
+            }
+            
+            // 総合的な健康状態の改善インジケーター
+            VStack(spacing: 5) {
+                Text("総合的な健康改善")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                
+                HStack(spacing: 0) {
+                    ForEach(0..<10, id: \.self) { index in
+                        let fillLevel = healthImprovementLevel()
+                        Rectangle()
+                            .fill(index < Int(fillLevel * 10) ? Color.green : Color.gray.opacity(0.3))
+                            .frame(height: 8)
+                            .cornerRadius(4)
+                            .opacity(animate ? 1 : 0)
+                            .animation(.easeIn.delay(0.05 * Double(index)), value: animate)
+                    }
+                }
+                
+                Text("\(Int(healthImprovementLevel() * 100))%")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.top, 10)
+        }
+    }
+    
+    // 肺機能の回復率を計算
+    private func lungFunctionRecovery() -> String {
+        if daysSinceQuit <= 0 {
+            return "0%"
+        } else if daysSinceQuit < 3 {
+            return "5%"
+        } else if daysSinceQuit < 7 {
+            return "10%"
+        } else if daysSinceQuit < 30 {
+            return "20%"
+        } else if daysSinceQuit < 90 {
+            return "30%"
+        } else if daysSinceQuit < 180 {
+            return "40%"
+        } else if daysSinceQuit < 365 {
+            return "60%"
+        } else {
+            return "80%以上"
+        }
+    }
+    
+    // 心臓病リスクの減少率を計算
+    private func heartRiskReduction() -> String {
+        if daysSinceQuit <= 0 {
+            return "0%"
+        } else if daysSinceQuit < 1 {
+            return "2%"
+        } else if daysSinceQuit < 7 {
+            return "5%"
+        } else if daysSinceQuit < 30 {
+            return "10%"
+        } else if daysSinceQuit < 90 {
+            return "20%"
+        } else if daysSinceQuit < 365 {
+            return "30%"
+        } else if daysSinceQuit < 730 {
+            return "40%"
+        } else {
+            return "50%以上"
+        }
+    }
+    
+    // 避けられたタールの量を計算（mg単位、たばこ1本あたり約10mgと仮定）
+    private func tarAvoided() -> Int {
+        return cigarettesNotSmoked * 10
+    }
+    
+    // 総合的な健康改善レベル（0.0〜1.0）
+    private func healthImprovementLevel() -> Double {
+        if daysSinceQuit <= 0 {
+            return 0.0
+        } else if daysSinceQuit < 1 {
+            return 0.05
+        } else if daysSinceQuit < 3 {
+            return 0.1
+        } else if daysSinceQuit < 7 {
+            return 0.2
+        } else if daysSinceQuit < 14 {
+            return 0.3
+        } else if daysSinceQuit < 30 {
+            return 0.4
+        } else if daysSinceQuit < 90 {
+            return 0.5
+        } else if daysSinceQuit < 180 {
+            return 0.6
+        } else if daysSinceQuit < 365 {
+            return 0.7
+        } else if daysSinceQuit < 730 {
+            return 0.8
+        } else {
+            return 0.9
+        }
+    }
+}
+
+// 既存のEnhancedDayProgressGraphは変更なし
 
 struct EnhancedDayProgressGraph: View {
     let daysSinceQuit: Int
@@ -262,7 +450,7 @@ struct EnhancedDayProgressGraph: View {
     }
 }
 
-// 情報タイルコンポーネント
+// 情報タイルコンポーネント（変更なし）
 struct InfoTile: View {
     let icon: String
     let title: String
@@ -288,261 +476,5 @@ struct InfoTile: View {
         .padding(10)
         .background(color.opacity(0.1))
         .cornerRadius(10)
-    }
-}
-
-struct EnhancedSavingsGraph: View {
-    let moneySaved: Double
-    let days: Int
-    let cigarettesPerDay: Int
-    let pricePerPack: Double
-    let cigarettesPerPack: Int
-    let currency: String
-    let animate: Bool
-    
-    // 将来予測の日数
-    private let futurePredictionDays = 30
-    
-    // 日付フォーマッタ
-    private var monthFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "M月"
-        return formatter
-    }
-    
-    // 一日あたりの節約額を計算
-    private var savingsPerDay: Double {
-        let cigarettesPrice = pricePerPack / Double(cigarettesPerPack)
-        return cigarettesPrice * Double(cigarettesPerDay)
-    }
-    
-    // グラフのポイントを計算
-    private func calculatePoints(in size: CGSize) -> [CGPoint] {
-        let width = size.width
-        let height = size.height
-        let totalDays = days + futurePredictionDays
-        let pointDistance = width / CGFloat(totalDays > 1 ? totalDays - 1 : 1)
-        
-        var points: [CGPoint] = []
-        
-        // 過去の実際の節約額
-        for i in 0...days {
-            let x = CGFloat(i) * pointDistance
-            let actualSaving = Double(i) * savingsPerDay
-            let y = height - CGFloat(actualSaving / (savingsPerDay * Double(totalDays))) * height
-            points.append(CGPoint(x: x, y: y))
-        }
-        
-        // 将来の予測節約額
-        if days > 0 {
-            for i in 1...futurePredictionDays {
-                let x = CGFloat(days + i) * pointDistance
-                let predictedSaving = moneySaved + Double(i) * savingsPerDay
-                let y = height - CGFloat(predictedSaving / (savingsPerDay * Double(totalDays))) * height
-                points.append(CGPoint(x: x, y: y))
-            }
-        }
-        
-        return points
-    }
-    
-    var body: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 0) {
-                ZStack {
-                    // グラフの背景グリッド
-                    VStack(spacing: 0) {
-                        ForEach(0..<5) { i in
-                            Divider()
-                            if i < 4 {
-                                Spacer()
-                            }
-                        }
-                    }
-                    
-                    // 左側のY軸ラベル
-                    VStack(alignment: .leading) {
-                        ForEach(0..<5) { i in
-                            if i == 0 {
-                                Text("0\(currency)")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                            } else {
-                                let value = Int(Double(i) * savingsPerDay * Double(days + futurePredictionDays) / 4.0)
-                                Text("\(value)\(currency)")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                            }
-                            if i < 4 {
-                                Spacer()
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 5)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    // 節約グラフ
-                    if days > 0 {
-                        let pathPoints = calculatePoints(in: CGSize(width: geometry.size.width - 50, height: geometry.size.height - 100))
-                        
-                        ZStack {
-                            // 実際の節約グラフ（塗りつぶし）
-                            Path { path in
-                                guard pathPoints.count > 1 else { return }
-                                
-                                let cutoffIndex = min(days, pathPoints.count - 1)
-                                
-                                path.move(to: CGPoint(x: pathPoints[0].x, y: geometry.size.height - 40))
-                                path.addLine(to: pathPoints[0])
-                                
-                                for i in 1...cutoffIndex {
-                                    path.addLine(to: pathPoints[i])
-                                }
-                                
-                                path.addLine(to: CGPoint(x: pathPoints[cutoffIndex].x, y: geometry.size.height - 40))
-                                path.closeSubpath()
-                            }
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [.green.opacity(0.7), .green.opacity(0.1)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .opacity(animate ? 1 : 0)
-                            .animation(.easeInOut(duration: 1.0), value: animate)
-                            
-                            // 実際の節約ライン
-                            Path { path in
-                                guard pathPoints.count > 1 else { return }
-                                
-                                let cutoffIndex = min(days, pathPoints.count - 1)
-                                
-                                path.move(to: pathPoints[0])
-                                for i in 1...cutoffIndex {
-                                    path.addLine(to: pathPoints[i])
-                                }
-                            }
-                            .trim(from: 0, to: animate ? 1 : 0)
-                            .stroke(Color.green, lineWidth: 3)
-                            .animation(.easeInOut(duration: 1.5), value: animate)
-                            
-                            // 将来予測のライン
-                            if days > 0 && pathPoints.count > days + 1 {
-                                Path { path in
-                                    let startIndex = min(days, pathPoints.count - 1)
-                                    path.move(to: pathPoints[startIndex])
-                                    
-                                    for i in startIndex+1..<pathPoints.count {
-                                        path.addLine(to: pathPoints[i])
-                                    }
-                                }
-                                .trim(from: 0, to: animate ? 1 : 0)
-                                .stroke(Color.green.opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [5, 3]))
-                                .animation(.easeInOut(duration: 1.5).delay(1.0), value: animate)
-                            }
-                            
-                            // X軸の月ラベル
-                            HStack(alignment: .bottom, spacing: 0) {
-                                ForEach(0..<4) { i in
-                                    let date = Calendar.current.date(byAdding: .day, value: i * (days + futurePredictionDays) / 3, to: Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()) ?? Date()
-                                    
-                                    Text(monthFormatter.string(from: date))
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.secondary)
-                                    
-                                    if i < 3 {
-                                        Spacer()
-                                    }
-                                }
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                            .padding(.bottom, -30)
-                            .padding(.horizontal, 25)
-                        }
-                        .padding(.top, 25)
-                        .padding(.bottom, 40)
-                        .padding(.horizontal, 25)
-                    } else {
-                        // 初期状態のメッセージ
-                        VStack {
-                            Text("禁煙を始めるとグラフが表示されます")
-                                .foregroundColor(.secondary)
-                                .font(.subheadline)
-                        }
-                    }
-                }
-                
-                // グラフと金額表示の間にスペースを追加
-                Spacer()
-                    .frame(height: 20)
-                
-                // 節約金額表示
-                if days > 0 {
-                    VStack(spacing: 5) {
-                        HStack(spacing: 20) {
-                            VStack(alignment: .leading) {
-                                Text("現在の節約額")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                
-                                Text("\(Int(moneySaved))\(currency)")
-                                    .font(.headline)
-                                    .foregroundColor(.green)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.5) // 大きな金額でも調整
-                            }
-                            
-                            Spacer()
-                            
-                            VStack(alignment: .trailing) {
-                                Text("1ヶ月後の予測額")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                
-                                Text("\(Int(moneySaved + savingsPerDay * 30))\(currency)")
-                                    .font(.headline)
-                                    .foregroundColor(.green.opacity(0.7))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.5) // 大きな金額でも調整
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-                
-                // グラフの凡例
-                HStack {
-                    HStack {
-                        Rectangle()
-                            .fill(Color.green)
-                            .frame(width: 15, height: 3)
-                        
-                        Text("実際の節約額")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    HStack {
-                        Rectangle()
-                            .fill(Color.green.opacity(0.5))
-                            .frame(width: 15, height: 3)
-                            .overlay(
-                                Rectangle()
-                                    .stroke(style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                                    .foregroundColor(.green.opacity(0.5))
-                            )
-                        
-                        Text("予測節約額")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top, 10)
-            }
-        }
     }
 }
